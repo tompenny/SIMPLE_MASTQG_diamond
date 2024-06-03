@@ -39,17 +39,6 @@ def Gaussian(x, A, x0, sigma):
     """
     return A*np.exp(-(x-x0)**2/(2*sigma**2))
 
-def impulse_resp(time, t0, A, y, w0):
-    output = np.zeros(len(time))
-    y1 = y/2 # factor two required by definition
-    w1 = np.sqrt(w0**2 - y1**2)
-    for n, t in enumerate(time):
-        if t < t0:
-            output[n] = 0
-        if t > t0:
-            output[n] =  A*np.sin(w1*(t-t0))*np.exp(-y1*(t-t0))
-    return output
-
 from scipy.signal import butter, filtfilt, lfilter
 
 def butter_lowpass(highcut, fs, order=5):
@@ -88,36 +77,6 @@ def butter_bandpass_filter(data, lowcut, highcut, fs, order=5):
     b, a = butter_bandpass(lowcut, highcut, fs, order=order)
     y = filtfilt(b, a, data)
     return y
-
-def bandpass_peak_find(filename, cf, BW, fs, order):
-    data = sio.loadmat(filename)
-    x = data['x'][0]
-    x = butter_bandpass_filter(x, cf-BW, cf+BW, fs = fs, order =order)
-    max = np.max(x)
-    return max
-
-def bandpass_peak_find_noise(filename, cf, BW, fs, order):
-    data = sio.loadmat(filename)
-    x = data['x'][0]
-    x = butter_bandpass_filter(x, cf-BW, cf+BW, fs = fs, order = order)
-    m = int(np.random.uniform(0, len(x)))
-    max = x[m]
-    return max
-
-def bandpass_peak_find2(filename, cf, BW, fs, order):
-    data = load_data_hdf5(filename)
-    x = data['x']
-    x = butter_bandpass_filter(x, cf-BW, cf+BW, fs = fs, order =order)
-    max = np.max(x)
-    return max
-
-def bandpass_peak_find_noise2(filename, cf, BW, fs, order):
-    data = load_data_hdf5(filename)
-    x = data['x']
-    x = butter_bandpass_filter(x, cf-BW, cf+BW, fs = fs, order = order)
-    m = int(np.random.uniform(0, len(x)))
-    max = x[m]
-    return max
 
 def histogram_and_fit(amp_max, bin_num, count_amp, fit = True, plot = True):
     hist3, bins3 = np.histogram(amp_max, bin_num)
@@ -162,97 +121,6 @@ def load_data_hdf5(filename):
         mdict[key] = dataset
     f.close()
     return mdict
-
-def make_optimal_filter(response_template, noise_template, noise_template_frequency):
-    """
-    Makes optimal filter from response template and noise template
-    response_template: The average response of the oscillator to and impulse, time domain
-    noise_template: The PSD of the oscillator driven by noise processes (in our case usually white noise from gas)
-    noise_template_frequency: Frequency bins of the noise template PSD
-    """
-
-    stilde = np.fft.rfft(response_template)
-    sfreq = np.fft.rfftfreq(len(response_template),d=1e-6)
-    J_out = np.interp(sfreq, noise_template_frequency, noise_template)
-    phi = stilde/J_out
-
-    phi_t = np.fft.irfft(phi)
-    phi_t = phi_t/np.max(phi_t)
-    return phi_t
-
-def make_optimal_filter_ns(response_template, noise_template, noise_template_frequency):
-    """
-    Makes optimal filter from response template and noise template for non-stationary data. Basically just cuts off some low frequency artifacts due to using rectangular window in generating PSD.
-    response_template: The average response of the oscillator to and impulse, time domain
-    noise_template: The PSD of the oscillator driven by noise processes (in our case usually white noise from gas)
-    noise_template_frequency: Frequency bins of the noise template PSD
-    """
-
-    stilde = np.fft.rfft(response_template)
-    sfreq = np.fft.rfftfreq(len(response_template),d=1e-6)
-    J_out = np.interp(sfreq, noise_template_frequency, noise_template)
-    J_out[sfreq<10000] = 10
-    phi = stilde/J_out
-
-    phi_t = np.fft.irfft(phi)
-    phi_t = phi_t/np.max(phi_t)
-    return phi_t
-
-def optimal_filter(filter, data):
-    """
-    Applies optimal filter to data and returns the estimated value of the impulse.
-    Does this in the frequency domain for computational efficiency.
-    Only searches for impulse around time of impulse (which in this case is known)
-    Filter: The optimal filter template. The output of make_optimal_filter
-    data: The time domain data in which you want to search for an impulse
-    """
-    dl = len(data)
-    corr_data = np.abs(scisig.correlate(data, filter, mode = 'same'))
-    corr_max = np.max(corr_data[int(dl/2-dl/10):int(dl/2+dl/10)])
-    return corr_max
-
-def optimal_filter_noise(filter, data):
-    """
-    Applies optimal filter to data and returns random value for estimate. Needs to do this to stop search bias in noise.
-    Does this in the frequency domain for computational efficiency.
-    Only searches for impulse around time of impulse (which in this case is known)
-    Filter: The optimal filter template. The output of make_optimal_filter
-    data: The time domain data in which you want to search for an impulse
-    """
-    dl = len(data)
-    corr_data = np.abs(scisig.correlate(data, filter, mode = 'same'))
-    corr_max = np.max(corr_data[int(dl/2-dl/10):int(dl/2+dl/10)])
-    m = int(np.random.uniform(0, dl/5))
-    corr_max = corr_data[int(dl/2-dl/10)+m]
-    return corr_max
-
-def optimal_filter_short(filter, data, band):
-    """
-    Applies optimal filter with a restricted template to data and returns the estimated value of the impulse.
-    Does this in the frequency domain for computational efficiency.
-    Only searches for impulse around time of impulse (which in this case is known)
-    Filter: The optimal filter template. The output of make_optimal_filter
-    data: The time domain data in which you want to search for an impulse
-    """
-    dl = len(data)
-    corr_data = np.abs(scisig.correlate(data, filter[int(dl/2-band):int(dl/2+band)], mode = 'same'))
-    corr_max = np.max(corr_data[int(dl/2-dl/10):int(dl/2+dl/10)])
-    return corr_max
-
-def optimal_filter_short_noise(filter, data):
-    """
-    Applies optimal filter to data with a restricted template and returns random value for estimate. Needs to do this to stop search bias in noise.
-    Does this in the frequency domain for computational efficiency.
-    Only searches for impulse around time of impulse (which in this case is known)
-    Filter: The optimal filter template. The output of make_optimal_filter
-    data: The time domain data in which you want to search for an impulse
-    """
-    dl = len(data)
-    corr_data = np.abs(scisig.correlate(data, filter, mode = 'same'))
-    corr_max = np.max(corr_data[int(dl/2-dl/10):int(dl/2+dl/10)])
-    m = int(np.random.uniform(0, dl/5))
-    corr_max = corr_data[int(dl/2-dl/10)+m]
-    return corr_max
 
 def lockin(data, fs, demod_freq, BW_pre, BW, BW2, mode):
     """
