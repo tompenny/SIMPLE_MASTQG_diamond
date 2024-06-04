@@ -15,7 +15,7 @@ def Linewidth(x, a,  x0, gamma):
     gamma: damping of harmonic oscillator
 
     """
-    return a*(gamma)/((x0**2 - x**2)**2+(x*gamma)**2)  
+    return a/((x0**2 - x**2)**2+(x*gamma)**2)  
 
 def Linewidth2(x, a,  x0, gamma, c):
     """
@@ -27,7 +27,7 @@ def Linewidth2(x, a,  x0, gamma, c):
     c: white measurement noise
 
     """
-    return a*(gamma)/((x0**2 - x**2)**2+(x*gamma)**2) + c
+    return a/((x0**2 - x**2)**2+(x*gamma)**2) + c
 
 def Gaussian(x, A, x0, sigma):
     """
