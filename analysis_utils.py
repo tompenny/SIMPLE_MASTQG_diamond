@@ -29,6 +29,30 @@ def Linewidth2(x, a,  x0, gamma, c):
     """
     return a/((x0**2 - x**2)**2+(x*gamma)**2) + c
 
+def double_Linewidth2(x, a,  x0, gamma, a2, x02, gamma2, c):
+    """
+    Function describing the PSD of a damped harmonic oscillator additional white measurement noise with two peaks in the spectra
+    x: Frequency bins of PSD
+    a: amplitude, here this is just a scaling factor for fitting
+    x0: natural frequency of harmonic oscillator
+    gamma: damping of harmonic oscillator
+    c: white measurement noise
+
+    """
+    return a/((x0**2 - x**2)**2+(x*gamma)**2) + a2/((x02**2 - x**2)**2+(x*gamma2)**2) + c
+
+def triple_Linewidth2(x, a,  x0, gamma, a2, x02, gamma2, a3, x03, gamma3, c):
+    """
+    Function describing the PSD of a damped harmonic oscillator additional white measurement noise with two peaks in the spectra
+    x: Frequency bins of PSD
+    a: amplitude, here this is just a scaling factor for fitting
+    x0: natural frequency of harmonic oscillator
+    gamma: damping of harmonic oscillator
+    c: white measurement noise
+
+    """
+    return a/((x0**2 - x**2)**2+(x*gamma)**2) + a2/((x02**2 - x**2)**2+(x*gamma2)**2) + a3/((x03**2 - x**2)**2+(x*gamma3)**2) + c
+
 def Gaussian(x, A, x0, sigma):
     """
     Gaussian function
